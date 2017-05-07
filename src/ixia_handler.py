@@ -23,11 +23,12 @@ class IxiaHandler(object):
         #os.system("set TCL_LIBRARY=C:/Program Files (x86)/Ixia/Tcl/8.5.17.0/lib/tcl8.5")
         #os.system("set TK_LIBRARY=C:/Program Files (x86)/Ixia/Tcl/8.5.17.0/lib/tk8.5")
         client_install_path = context.resource.attributes['Client Install Path']
+        client_install_path = client_install_path.replace('\\','/')
         python_interpreter_path = sys.executable.rstrip("\\Scripts\\python.exe")
         src_path = client_install_path.rsplit('Ixia/', 1)[0]
         copy_tree(src_path + "Ixia\\Tcl\\8.5.17.0\\lib\\tcl8.5\\reg1.2", python_interpreter_path + "\\tcl\\tcl8.5\\reg1.2")
 
-        log_file = 'C:/temp/ixload_shell_logger.txt'
+        log_file = 'ixload_shell_logger.txt'
 
         self.logger = logging.getLogger('root')
         self.logger.addHandler(logging.FileHandler(log_file))
