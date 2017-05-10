@@ -11,7 +11,7 @@ import re
 import json
 import csv
 import io
-import sys
+import sys,os
 from distutils.dir_util import copy_tree
 
 class IxiaHandler(object):
@@ -26,7 +26,8 @@ class IxiaHandler(object):
         client_install_path = client_install_path.replace('\\','/')
         python_interpreter_path = sys.executable.rstrip("\\Scripts\\python.exe")
         src_path = client_install_path.rsplit('Ixia/', 1)[0]
-        copy_tree(src_path + "Ixia\\Tcl\\8.5.17.0\\lib\\tcl8.5\\reg1.2", python_interpreter_path + "\\tcl\\tcl8.5\\reg1.2")
+        if not (os.path.isdir(src_path + "Ixia\\Tcl\\8.5.17.0\\lib\\tcl8.5\\reg1.2")):
+            copy_tree(src_path + "Ixia\\Tcl\\8.5.17.0\\lib\\tcl8.5\\reg1.2", python_interpreter_path + "\\tcl\\tcl8.5\\reg1.2")
 
         log_file = 'ixload_shell_logger.txt'
 
