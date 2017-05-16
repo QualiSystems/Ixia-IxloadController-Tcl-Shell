@@ -1,7 +1,7 @@
 shell:
-    name: Ixia
-    author: ''
-    email: ''
-    description: Ixia
-    version: 1.0.0
+    name: ixia_ixloadcontroller_shell
+    author: Yoram Shamir
+    email: yoram-s@quali.com
+    description: IxLoad Controller shell
+    version: 1.0.1
     driver_name: IxLoadControllerDriver

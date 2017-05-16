@@ -1,18 +1,34 @@
 import logging
 from cloudshell.shell.core.session.cloudshell_session import CloudShellSessionContext
 from cloudshell.shell.core.driver_context import AutoLoadDetails
-from trafficgenerator.tgn_tcl import TgnTkMultithread,TgnTk
+from trafficgenerator.tgn_tcl import TgnTkMultithread
 from ixload.ixl_app import IxlApp
 from ixload.api.ixl_tcl import IxlTclWrapper
 from ixload.ixl_statistics_view import IxlStatView
-from os import path
 from helper.quali_rest_api_helper import create_quali_api_instance
 import re
 import json
 import csv
 import io
-import sys,os
+import sys
+import os
+from os import path
 from distutils.dir_util import copy_tree
+
+
+def get_reservation_ports(session, reservation_id):
+    """ Get all Generic Traffic Generator Port in reservation.
+
+    :return: list of all Generic Traffic Generator Port resource objects in reservation
+    """
+
+    reservation_ports = []
+    reservation = session.GetReservationDetails(reservation_id).ReservationDescription
+    for resource in reservation.Resources:
+        if resource.ResourceModelName == 'Generic Traffic Generator Port':
+            reservation_ports.append(resource)
+    return reservation_ports
+
 
 class IxiaHandler(object):
 
@@ -20,23 +36,19 @@ class IxiaHandler(object):
         """
         :type context: cloudshell.shell.core.driver_context.InitCommandContext
         """
-        #os.system("set TCL_LIBRARY=C:/Program Files (x86)/Ixia/Tcl/8.5.17.0/lib/tcl8.5")
-        #os.system("set TK_LIBRARY=C:/Program Files (x86)/Ixia/Tcl/8.5.17.0/lib/tk8.5")
-        client_install_path = context.resource.attributes['Client Install Path']
-        client_install_path = client_install_path.replace('\\','/')
-        python_interpreter_path = sys.executable.rstrip("\\Scripts\\python.exe")
-        src_path = client_install_path.rsplit('Ixia/', 1)[0]
-        if not (os.path.isdir(src_path + "Ixia\\Tcl\\8.5.17.0\\lib\\tcl8.5\\reg1.2")):
-            copy_tree(src_path + "Ixia\\Tcl\\8.5.17.0\\lib\\tcl8.5\\reg1.2", python_interpreter_path + "\\tcl\\tcl8.5\\reg1.2")
 
-        log_file = 'ixload_shell_logger.txt'
+        client_install_path = context.resource.attributes['Client Install Path'].replace('\\', '/')
+        ixia_tcl_reg_path = client_install_path + '/3rdParty/Python2.7/Lib/tcl8.5/reg1.2'
+        python_interpreter_path = sys.executable.replace('\\', '/').rstrip('Scripts/python.exe')
+        python_tcl_reg_path = python_interpreter_path + "/tcl/reg1.2"
+        if not (os.path.isdir(python_tcl_reg_path)):
+            copy_tree(ixia_tcl_reg_path, python_tcl_reg_path)
 
-        self.logger = logging.getLogger('root')
-        self.logger.addHandler(logging.FileHandler(log_file))
+        self.logger = logging.getLogger('ixload')
+        self.logger.addHandler(logging.FileHandler('c:/temp/ixload_shell_logger.txt'))
         self.logger.setLevel('DEBUG')
 
         self.tcl_interp = TgnTkMultithread()
-
         self.tcl_interp.start()
         api_wrapper = IxlTclWrapper(self.logger, client_install_path, self.tcl_interp)
         self.ixl = IxlApp(self.logger, api_wrapper)
@@ -47,7 +59,6 @@ class IxiaHandler(object):
         self.ixl.connect(ip=address)
         self.logger.info("Finished connecting to address {}".format(address))
         return ""
-
 
     def tearDown(self):
         self.tcl_interp.stop()
@@ -115,6 +126,12 @@ class IxiaHandler(object):
 
         self.logger.info("Port Reservation Completed")
 
+    def start_test(self, context, blocking):
+        """
+        :type context: cloudshell.shell.core.driver_context.ResourceRemoteCommandContext
+        """
+
+        self.ixl.start_test(bool(blocking))
 
     def stop_test(self, context):
         """
@@ -123,46 +140,37 @@ class IxiaHandler(object):
 
         self.ixl.stop_test()
 
-    def start_test(self, context,blocking):
-        """
-        :type context: cloudshell.shell.core.driver_context.ResourceRemoteCommandContext
-        """
-        blocking = bool(blocking) if blocking in ["true", "True"] else False
-        self.ixl.start_test(blocking)
-
     def get_statistics(self, context, view_name, output_type):
 
         output_file = output_type.lower().strip()
         if output_file != 'json' and output_file != 'csv':
             raise Exception("The output format should be json or csv")
-        client_stats = IxlStatView(view_name)
-        client_stats.read_stats()
-        statistics = client_stats.statistics
+        stats_obj = IxlStatView(view_name)
+        stats_obj.read_stats()
+        statistics = stats_obj.get_all_stats()
         reservation_id = context.reservation.reservation_id
         my_api = self.get_api(context)
         if output_file.lower() == 'json':
-            statistics = json.dumps(statistics, indent=4, sort_keys=True,ensure_ascii=False)
-            my_api.WriteMessageToReservationOutput(reservation_id, statistics)
+            statistics_str = json.dumps(statistics, indent=4, sort_keys=True, ensure_ascii=False)
+            my_api.WriteMessageToReservationOutput(reservation_id, statistics_str)
+            return json.loads(statistics_str)
         elif output_file.lower() == 'csv':
             output = io.BytesIO()
-            w = csv.DictWriter(output, statistics.keys())
+            w = csv.DictWriter(output, stats_obj.captions)
             w.writeheader()
-            w.writerow(statistics)
-            my_api.WriteMessageToReservationOutput(reservation_id,output.getvalue().strip('\r\n'))
-        #self.upload_file_to_reservation(context,my_api,reservation_id)
-        self.get_results(context,client_stats,view_name)
+            for time_stamp in statistics:
+                w.writerow(statistics[time_stamp])
+            my_api.WriteMessageToReservationOutput(reservation_id, output.getvalue().strip())
+            return output.getvalue().strip()
+        else:
+            raise Exception('Output type should be CSV/JSON')
 
+    def get_results(self, context, client_stats, view_name):
 
-
-    def get_results(self,context,client_stats,view_name):
-
-
-        csvfile = open(path.join(client_stats.results_dir.replace('\\', '/'), view_name + '.csv'), 'rb')#open('ixload_stats.csv')
+        csvfile = open(path.join(client_stats.results_dir.replace('\\', '/'), view_name + '.csv'), 'rb')
         quali_api_helper = create_quali_api_instance(context, self.logger)
         quali_api_helper.login()
         quali_api_helper.upload_file(context.reservation.reservation_id, file_name="file_name",
                                      file_stream=csvfile)
-        #with open(save_file_name, 'w') as result_file:
-        #    result_file.write(pdf_result)
 
         return "Please check attachments for results"
