@@ -1,19 +1,22 @@
+
 import logging
-from cloudshell.shell.core.session.cloudshell_session import CloudShellSessionContext
-from cloudshell.shell.core.driver_context import AutoLoadDetails
-from trafficgenerator.tgn_tcl import TgnTkMultithread
-from ixload.ixl_app import IxlApp
-from ixload.api.ixl_tcl import IxlTclWrapper
-from ixload.ixl_statistics_view import IxlStatView
-from helper.quali_rest_api_helper import create_quali_api_instance
-import re
 import json
 import csv
 import io
 import sys
 import os
-from os import path
+import time
 from distutils.dir_util import copy_tree
+from collections import OrderedDict
+
+from trafficgenerator.tgn_tcl import TgnTkMultithread
+from ixload.ixl_app import IxlApp
+from ixload.api.ixl_tcl import IxlTclWrapper
+from ixload.ixl_statistics_view import IxlStatView
+
+from cloudshell.shell.core.session.cloudshell_session import CloudShellSessionContext
+
+from helper.quali_rest_api_helper import create_quali_api_instance
 
 
 def get_reservation_ports(session, reservation_id):
@@ -30,7 +33,7 @@ def get_reservation_ports(session, reservation_id):
     return reservation_ports
 
 
-class IxiaHandler(object):
+class IxlHandler(object):
 
     def initialize(self, context):
         """
@@ -63,22 +66,6 @@ class IxiaHandler(object):
     def tearDown(self):
         self.tcl_interp.stop()
 
-    def get_inventory(self, context):
-        """
-        :type context: cloudshell.shell.core.driver_context.ResourceRemoteCommandContext
-        """
-
-        return AutoLoadDetails([], [])
-
-    def get_api(self, context):
-        """
-
-        :param context:
-        :return:
-        """
-
-        return CloudShellSessionContext(context).get_api()
-
     def load_config(self, context, ixia_config_file_name):
         """
         :param str stc_config_file_name: full path to STC configuration file (tcc or xml)
@@ -87,42 +74,25 @@ class IxiaHandler(object):
         """
 
         self.ixl.load_config(ixia_config_file_name)
-        repository = self.ixl.repository
+        config_elements = self.ixl.repository.get_elements()
+
         reservation_id = context.reservation.reservation_id
-        my_api = self.get_api(context)
-        response = my_api.GetReservationDetails(reservationId=reservation_id)
+        my_api = CloudShellSessionContext(context).get_api()
 
-        search_chassis = "Ixia Chassis"
-        search_port = "Port"
-        chassis_objs_dict = dict()
-        ports_obj = []
+        reservation_ports = {}
+        for port in get_reservation_ports(my_api, reservation_id):
+            reservation_ports[my_api.GetAttributeValue(port.Name, 'Logical Name').Value.strip()] = port
 
-        for resource in response.ReservationDescription.Resources:
-            if resource.ResourceModelName == search_chassis:
-                chassis_objs_dict[resource.FullAddress] = {'chassis': resource, 'ports': list()}
-        for resource in response.ReservationDescription.Resources:
-            if resource.ResourceFamilyName == search_port:
-                chassis_adr = resource.FullAddress.split('/')[0]
-                if chassis_adr in chassis_objs_dict:
-                    chassis_objs_dict[chassis_adr]['ports'].append(resource)
-                    ports_obj.append(resource)
-
-        ports_obj_dict = dict()
-        for port in ports_obj:
-            val = my_api.GetAttributeValue(resourceFullPath=port.Name, attributeName="Logical Name").Value
-            if val:
-                port.logic_name = val
-                ports_obj_dict[val.strip()] = port
-        if not ports_obj_dict:
-            self.logger.error("You should add logical name for ports")
-            raise Exception("You should add logical name for ports")
-
-        for port_name in ports_obj_dict:
-            FullAddress = re.sub(r'PG.*?[^a-zA-Z0-9 ]', r'', ports_obj_dict[port_name].FullAddress)
-            physical_add = re.sub(r'[^./0-9 ]', r'', FullAddress)
-            self.logger.info("Logical Port %s will be reserved now on Physical location %s" %
-                             (str(port_name), str(physical_add)))
-            repository.get_object_by_name(port_name).reserve(str(physical_add))
+        for name, element in config_elements.items():
+            if name in reservation_ports:
+                address = reservation_ports[name].FullAddress
+                self.logger.debug('Logical Port {} will be reserved on Physical location {}'.format(name, address))
+                element.reserve(address)
+            else:
+                self.logger.error('Configuration element "{}" not found in reservation elements {}'.
+                                  format(element, reservation_ports.keys()))
+                raise Exception('Configuration element "{}" not found in reservation elements {}'.
+                                format(element, reservation_ports.keys()))
 
         self.logger.info("Port Reservation Completed")
 
@@ -149,28 +119,24 @@ class IxiaHandler(object):
         stats_obj.read_stats()
         statistics = stats_obj.get_all_stats()
         reservation_id = context.reservation.reservation_id
-        my_api = self.get_api(context)
+        my_api = CloudShellSessionContext(context).get_api()
         if output_file.lower() == 'json':
             statistics_str = json.dumps(statistics, indent=4, sort_keys=True, ensure_ascii=False)
-            my_api.WriteMessageToReservationOutput(reservation_id, statistics_str)
             return json.loads(statistics_str)
         elif output_file.lower() == 'csv':
             output = io.BytesIO()
-            w = csv.DictWriter(output, stats_obj.captions)
+            w = csv.DictWriter(output, ['Timestamp'] + stats_obj.captions)
             w.writeheader()
             for time_stamp in statistics:
-                w.writerow(statistics[time_stamp])
-            my_api.WriteMessageToReservationOutput(reservation_id, output.getvalue().strip())
-            return output.getvalue().strip()
+                w.writerow(OrderedDict({'Timestamp': time_stamp}.items() + statistics[time_stamp].items()))
+            quali_api_helper = create_quali_api_instance(context, self.logger)
+            quali_api_helper.login()
+            full_file_name = view_name.replace(' ', '_') + '_' + time.ctime().replace(' ', '_') + '.csv'
+            quali_api_helper.upload_file(context.reservation.reservation_id,
+                                         file_name=full_file_name,
+                                         file_stream=output.getvalue().strip())
+            my_api.WriteMessageToReservationOutput(reservation_id,
+                                                   'Statistics view saved in attached file - ' + full_file_name)
+            return output.getvalue().strip('\r\n')
         else:
             raise Exception('Output type should be CSV/JSON')
-
-    def get_results(self, context, client_stats, view_name):
-
-        csvfile = open(path.join(client_stats.results_dir.replace('\\', '/'), view_name + '.csv'), 'rb')
-        quali_api_helper = create_quali_api_instance(context, self.logger)
-        quali_api_helper.login()
-        quali_api_helper.upload_file(context.reservation.reservation_id, file_name="file_name",
-                                     file_stream=csvfile)
-
-        return "Please check attachments for results"

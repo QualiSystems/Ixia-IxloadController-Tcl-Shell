@@ -1,12 +1,15 @@
 
 from cloudshell.shell.core.resource_driver_interface import ResourceDriverInterface
-from ixia_handler import IxiaHandler
+from cloudshell.shell.core.context_utils import get_resource_name
+from cloudshell.shell.core.session.cloudshell_session import CloudShellSessionContext
+
+from ixl_handler import IxlHandler
 
 
 class IxLoadControllerDriver(ResourceDriverInterface):
 
     def __init__(self):
-        self.handler = IxiaHandler()
+        self.handler = IxlHandler()
 
     def initialize(self, context):
         """
@@ -15,16 +18,6 @@ class IxLoadControllerDriver(ResourceDriverInterface):
         """
 
         self.handler.initialize(context)
-        return ""
-
-    def get_inventory(self, context):
-        """ Return device structure with all standard attributes
-
-        :type context: cloudshell.shell.core.driver_context.AutoLoadCommandContext
-        :rtype: cloudshell.shell.core.driver_context.AutoLoadDetails
-        """
-
-        return self.handler.get_inventory(context)
 
     def load_config(self, context, ixia_config_file_name):
         """ Load STC configuration file and reserve ports.
@@ -32,8 +25,13 @@ class IxLoadControllerDriver(ResourceDriverInterface):
         :type context: cloudshell.shell.core.driver_context.ResourceRemoteCommandContext
         """
 
+        reservation_id = context.reservation.reservation_id
+        resource_name = get_resource_name(context=context)
+        my_api = CloudShellSessionContext(context).get_api()
+        my_api.EnqueueCommand(reservationId=reservation_id, targetName=resource_name, commandName="keep_alive",
+                              targetType="Service")
+
         self.handler.load_config(context, ixia_config_file_name)
-        return ""
 
     def start_test(self, context, blocking):
         """
