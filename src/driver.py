@@ -1,9 +1,8 @@
 
 from cloudshell.shell.core.resource_driver_interface import ResourceDriverInterface
-from cloudshell.shell.core.context_utils import get_resource_name
-from cloudshell.shell.core.session.cloudshell_session import CloudShellSessionContext
 
 from ixl_handler import IxlHandler
+import tg_helper
 
 
 class IxLoadControllerDriver(ResourceDriverInterface):
@@ -13,50 +12,51 @@ class IxLoadControllerDriver(ResourceDriverInterface):
 
     def initialize(self, context):
         """
-        :param context: ResourceCommandContext,ReservationContextDetailsobject with all Resource Attributes inside
         :type context:  context: cloudshell.shell.core.driver_context.ResourceRemoteCommandContext
         """
 
         self.handler.initialize(context)
 
-    def load_config(self, context, ixia_config_file_name):
-        """ Load STC configuration file and reserve ports.
-        :param context: the context the command runs on
+    def load_config(self, context, ixl_config_file_name):
+        """ Load IxLoad configuration file and reserve ports.
+
         :type context: cloudshell.shell.core.driver_context.ResourceRemoteCommandContext
+        :param ixl_config_file_name: full path to IxLoad configuration file (rxf).
         """
 
-        reservation_id = context.reservation.reservation_id
-        resource_name = get_resource_name(context=context)
-        my_api = CloudShellSessionContext(context).get_api()
-        my_api.EnqueueCommand(reservationId=reservation_id, targetName=resource_name, commandName="keep_alive",
-                              targetType="Service")
-
-        self.handler.load_config(context, ixia_config_file_name)
+        tg_helper.enqueue_keep_alive(context)
+        self.handler.load_config(context, ixl_config_file_name)
+        return ixl_config_file_name + ' loaded, ports reserved'
 
     def start_test(self, context, blocking):
-        """
-        :param context: the context the command runs on
+        """ Start IxLoad test.
+
         :type context: cloudshell.shell.core.driver_context.ResourceRemoteCommandContext
+        :param blocking: True - wait until test ends, False - start test and return immediately.
         """
 
-        self.handler.start_test(context, blocking)
-        return ""
+        self.handler.start_test(blocking)
 
     def stop_test(self, context):
-        """
-        :param context: the context the command runs on
+        """ Stop IxLoad test.
+
         :type context: cloudshell.shell.core.driver_context.ResourceRemoteCommandContext
         """
 
-        self.handler.stop_test(context)
-        return ""
+        self.handler.stop_test()
 
     def get_statistics(self, context, view_name, output_type):
+        """ Get statistics for specific view.
+
+        :type context: cloudshell.shell.core.driver_context.ResourceRemoteCommandContext
+        :param view_name: requested statistics view name.
+        :param output_type: JSON/CSV.
+        """
+
         return self.handler.get_statistics(context, view_name, output_type)
 
     def cleanup(self):
         self.handler.tearDown()
-        pass
 
     def keep_alive(self, context, cancellation_context):
 
