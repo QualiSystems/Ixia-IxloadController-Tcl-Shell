@@ -1,21 +1,14 @@
 
-from cloudshell.shell.core.resource_driver_interface import ResourceDriverInterface
+from cloudshell.traffic.driver import TrafficControllerDriver
 
 from ixl_handler import IxlHandler
-import tg_helper
 
 
-class IxLoadControllerDriver(ResourceDriverInterface):
+class IxLoadControllerDriver(TrafficControllerDriver):
 
     def __init__(self):
+        super(self.__class__, self).__init__()
         self.handler = IxlHandler()
-
-    def initialize(self, context):
-        """
-        :type context:  context: cloudshell.shell.core.driver_context.ResourceRemoteCommandContext
-        """
-
-        self.handler.initialize(context)
 
     def load_config(self, context, ixl_config_file_name):
         """ Load IxLoad configuration file and reserve ports.
@@ -24,7 +17,7 @@ class IxLoadControllerDriver(ResourceDriverInterface):
         :param ixl_config_file_name: full path to IxLoad configuration file (rxf).
         """
 
-        tg_helper.enqueue_keep_alive(context)
+        super(self.__class__, self).load_config(context)
         self.handler.load_config(context, ixl_config_file_name)
         return ixl_config_file_name + ' loaded, ports reserved'
 
@@ -55,12 +48,15 @@ class IxLoadControllerDriver(ResourceDriverInterface):
 
         return self.handler.get_statistics(context, view_name, output_type)
 
+    #
+    # Parent commands are not visible so we re define them in child.
+    #
+
+    def initialize(self, context):
+        super(self.__class__, self).initialize(context)
+
     def cleanup(self):
-        self.handler.tearDown()
+        super(self.__class__, self).cleanup()
 
     def keep_alive(self, context, cancellation_context):
-
-        while not cancellation_context.is_cancelled:
-            pass
-        if cancellation_context.is_cancelled:
-            self.handler.tearDown()
+        super(self.__class__, self).keep_alive(context, cancellation_context)

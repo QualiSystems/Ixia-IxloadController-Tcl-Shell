@@ -7,6 +7,9 @@ import os
 from distutils.dir_util import copy_tree
 from collections import OrderedDict
 
+from cloudshell.traffic.handler import TrafficHandler
+import cloudshell.traffic.tg_helper as tg_helper
+
 from trafficgenerator.tgn_tcl import TgnTkMultithread
 from ixload.ixl_app import IxlApp
 from ixload.api.ixl_tcl import IxlTclWrapper
@@ -14,15 +17,12 @@ from ixload.ixl_statistics_view import IxlStatView
 
 from cloudshell.shell.core.session.cloudshell_session import CloudShellSessionContext
 
-import tg_helper
 
+class IxlHandler(TrafficHandler):
 
-class IxlHandler(object):
+    def initialize(self, context, logger):
 
-    def __init__(self):
-        self.logger = tg_helper.create_logger('c:/temp/ixload_shell_logger.txt')
-
-    def initialize(self, context):
+        self.logger = logger
 
         self.logger.info('Copy reg1.2 to Tcl')
         client_install_path = context.resource.attributes['Client Install Path'].replace('\\', '/')
@@ -42,15 +42,19 @@ class IxlHandler(object):
             address = 'localhost'
         self.logger.info('connecting to address {}'.format(address))
         self.ixl.connect(ip=address)
+        results_dir = (os.path.splitext(self.logger.handlers[0].baseFilename)[0] + '--Results').replace('\\', '/')
+        logger.info('results directory = ' + results_dir)
+        self.ixl.controller.set_results_dir(results_dir)
         self.logger.info("Port Reservation Completed")
 
     def tearDown(self):
+        self.ixl.disconnect()
         self.tcl_interp.stop()
 
     def load_config(self, context, ixia_config_file_name):
 
         self.ixl.load_config(ixia_config_file_name)
-        self.ixl.repository.test.set_attributes(enableForceOwnership=True)
+        self.ixl.repository.test.set_attributes(enableForceOwnership=False)
         config_elements = self.ixl.repository.get_elements()
 
         reservation_id = context.reservation.reservation_id

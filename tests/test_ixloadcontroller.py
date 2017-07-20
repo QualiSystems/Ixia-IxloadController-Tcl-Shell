@@ -4,11 +4,12 @@
 import sys
 import os
 import unittest
+import logging
 
 from cloudshell.api.cloudshell_api import CloudShellAPISession
+import cloudshell.traffic.tg_helper as tg_helper
 
 from driver import IxLoadControllerDriver
-import tg_helper
 
 controller = 'localhost'
 client_install_path = 'C:/Program Files (x86)/Ixia/IxLoad/8.01-GA'
@@ -21,6 +22,8 @@ class TestIxLoadControllerDriver(unittest.TestCase):
         self.context = tg_helper.create_context(self.session, 'ixload test', 'IxLoad Controller', client_install_path)
         self.driver = IxLoadControllerDriver()
         self.driver.initialize(self.context)
+        print self.driver.logger.handlers[0].baseFilename
+        self.driver.logger.addHandler(logging.StreamHandler(sys.stdout))
 
     def tearDown(self):
         self.driver.cleanup()
@@ -38,6 +41,14 @@ class TestIxLoadControllerDriver(unittest.TestCase):
 
     def test_run_traffic(self):
         self.test_load_config()
+        self.driver.start_test(self.context, 'True')
+        print self.driver.get_statistics(self.context, 'Test_Client', 'json')
+        print self.driver.get_statistics(self.context, 'Test_Client', 'csv')
+
+    def test_run_stop_run(self):
+        self.test_load_config()
+        self.driver.start_test(self.context, 'False')
+        self.driver.stop_test(self.context)
         self.driver.start_test(self.context, 'True')
         print self.driver.get_statistics(self.context, 'Test_Client', 'json')
         print self.driver.get_statistics(self.context, 'Test_Client', 'csv')

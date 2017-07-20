@@ -1,4 +1,4 @@
-<Driver Description="Shell to setup and run IxLoad traffic generator" MainClass="driver.IxLoadControllerDriver" Name="IxLoadControllerDriver" Version="1.1.0">
+<Driver Description="Shell to setup and run IxLoad traffic generator" MainClass="driver.IxLoadControllerDriver" Name="IxLoadControllerDriver" Version="1.2.1">
     <Layout>
 
          <Category Name="Hidden Commands">
@@ -12,14 +12,15 @@
                            Description="Full path to IxLoad configuration file name" />
             </Parameters>
         </Command>
-        <Command Name="start_test" DisplayName="Start Test" Description="">
+        <Command Name="start_test" DisplayName="Start Test"
+				 Description="Start Test">
             <Parameters>
             	<Parameter Name="blocking" DisplayName="Blocking" Type="Lookup" Mandatory="True" AllowedValues="True, False" DefaultValue="True"
                            Description="True - return after traffic finish to run, False - return immediately" />
             </Parameters>
         </Command>
         <Command Name="stop_test" DisplayName="Stop Test"
-        		 Description="">
+        		 Description="Stop Test">
         </Command>
         <Command Name="get_statistics" DisplayName="Get Statistics" Description="Get all the ports statistics" >
          <Parameters>
