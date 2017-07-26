@@ -24,13 +24,9 @@ class IxlHandler(TrafficHandler):
 
         self.logger = logger
 
-        self.logger.info('Copy reg1.2 to Tcl')
         client_install_path = context.resource.attributes['Client Install Path'].replace('\\', '/')
-        ixia_tcl_reg_path = client_install_path + '/3rdParty/Python2.7/Lib/tcl8.5/reg1.2'
-        python_interpreter_path = sys.executable.replace('\\', '/').rstrip('Scripts/python.exe')
-        python_tcl_reg_path = python_interpreter_path + "/tcl/reg1.2"
-        if not (os.path.isdir(python_tcl_reg_path)):
-            copy_tree(ixia_tcl_reg_path, python_tcl_reg_path)
+        if sys.platform == 'win32':
+            self._windows_tcl_env(client_install_path)
 
         self.tcl_interp = TgnTkMultithread()
         self.tcl_interp.start()
@@ -42,9 +38,15 @@ class IxlHandler(TrafficHandler):
             address = 'localhost'
         self.logger.info('connecting to address {}'.format(address))
         self.ixl.connect(ip=address)
-        results_dir = (os.path.splitext(self.logger.handlers[0].baseFilename)[0] + '--Results').replace('\\', '/')
-        logger.info('results directory = ' + results_dir)
-        self.ixl.controller.set_results_dir(results_dir)
+        if sys.platform == 'win32':
+            log_file_name = self.logger.handlers[0].baseFilename
+            self.server_results_dir = (os.path.splitext(log_file_name)[0] + '--Results').replace('\\', '/')
+            self.client_results_dir = self.server_results_dir
+        else:
+            self.server_results_dir = 'c:/IxLoadResults'
+            self.client_results_dir = '/IxLoadResults'
+        logger.info('results directory = ' + self.server_results_dir)
+        self.ixl.controller.set_results_dir(self.server_results_dir)
         self.logger.info("Port Reservation Completed")
 
     def tearDown(self):
@@ -85,7 +87,7 @@ class IxlHandler(TrafficHandler):
 
     def get_statistics(self, context, view_name, output_type):
 
-        stats_obj = IxlStatView(view_name)
+        stats_obj = IxlStatView(view_name, self.client_results_dir)
         stats_obj.read_stats()
         statistics = stats_obj.get_all_stats()
         if output_type.lower().strip() == 'json':
@@ -101,3 +103,15 @@ class IxlHandler(TrafficHandler):
             return output.getvalue().strip()
         else:
             raise Exception('Output type should be CSV/JSON - got "{}"'.format(output_type))
+
+    #
+    # Private auxiliary methods.
+    #
+
+    def _windows_tcl_env(self, client_install_path):
+        self.logger.info('Copy reg1.2 to Tcl')
+        ixia_tcl_reg_path = client_install_path + '/3rdParty/Python2.7/Lib/tcl8.5/reg1.2'
+        python_interpreter_path = sys.executable.replace('\\', '/').rstrip('Scripts/python.exe')
+        python_tcl_reg_path = python_interpreter_path + "/tcl/reg1.2"
+        if not (os.path.isdir(python_tcl_reg_path)):
+            copy_tree(ixia_tcl_reg_path, python_tcl_reg_path)
