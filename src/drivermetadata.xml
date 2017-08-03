@@ -1,33 +1,26 @@
-<Driver Description="Shell to setup and run IxLoad traffic generator" MainClass="driver.IxLoadControllerDriver" Name="IxLoadControllerDriver" Version="1.2.1">
+<Driver Description="Shell to setup and run IxLoad traffic generator" MainClass="driver.IxLoadControllerDriver" Name="IxLoadControllerDriver" Version=" 1.2.3">
     <Layout>
 
          <Category Name="Hidden Commands">
-            <Command Name="keep_alive" DisplayName="Keep Alive" Tags="" Description="" EnableCancellation="true"/>
+            <Command Description="" DisplayName="Keep Alive" EnableCancellation="true" Name="keep_alive" Tags="" />
         </Category>
 
-		<Command Name="load_config" DisplayName="Load Configuration"
-				 Description="Load configuration and reserve ports">
+		<Command Description="Load configuration and reserve ports" DisplayName="Load Configuration" Name="load_config">
 	    	<Parameters>
-            	<Parameter Name="ixia_config_file_name" DisplayName="IxLoad config file name (rxf)" Type="String" Mandatory="True"
-                           Description="Full path to IxLoad configuration file name" />
+            	<Parameter Description="Full path to IxLoad configuration file name" DisplayName="IxLoad config file name (rxf)" Mandatory="True" Name="ixia_config_file_name" Type="String" />
             </Parameters>
         </Command>
-        <Command Name="start_test" DisplayName="Start Test"
-				 Description="Start Test">
+        <Command Description="Start Test" DisplayName="Start Test" Name="start_test">
             <Parameters>
-            	<Parameter Name="blocking" DisplayName="Blocking" Type="Lookup" Mandatory="True" AllowedValues="True, False" DefaultValue="True"
-                           Description="True - return after traffic finish to run, False - return immediately" />
+            	<Parameter AllowedValues="True, False" DefaultValue="True" Description="True - return after traffic finish to run, False - return immediately" DisplayName="Blocking" Mandatory="True" Name="blocking" Type="Lookup" />
             </Parameters>
         </Command>
-        <Command Name="stop_test" DisplayName="Stop Test"
-        		 Description="Stop Test">
+        <Command Description="Stop Test" DisplayName="Stop Test" Name="stop_test">
         </Command>
-        <Command Name="get_statistics" DisplayName="Get Statistics" Description="Get all the ports statistics" >
+        <Command Description="Get all the ports statistics" DisplayName="Get Statistics" Name="get_statistics">
          <Parameters>
-            	<Parameter Name="view_name" DisplayName="View Name" Type="String" Mandatory="True"
-                           Description="Name of csv file from the IxLoad results directory (c:\temp\IxLoad)" />
-                <Parameter Name="output_type" DisplayName="Output Type" Type="Lookup" Mandatory="True" AllowedValues="CSV, JSON" DefaultValue="CSV"
-                		   Description="CSV or JSON" />
+            	<Parameter Description="Name of csv file from the IxLoad results directory (c:\temp\IxLoad)" DisplayName="View Name" Mandatory="True" Name="view_name" Type="String" />
+                <Parameter AllowedValues="CSV, JSON" DefaultValue="CSV" Description="CSV or JSON" DisplayName="Output Type" Mandatory="True" Name="output_type" Type="Lookup" />
             </Parameters>
         </Command>
 
