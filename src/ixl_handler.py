@@ -10,7 +10,6 @@ from collections import OrderedDict
 from cloudshell.traffic.handler import TrafficHandler
 import cloudshell.traffic.tg_helper as tg_helper
 
-from trafficgenerator.tgn_tcl import TgnTkMultithread
 from ixload.ixl_app import IxlApp
 from ixload.api.ixl_tcl import IxlTclWrapper
 from ixload.ixl_statistics_view import IxlStatView
@@ -28,9 +27,7 @@ class IxlHandler(TrafficHandler):
         if sys.platform == 'win32':
             self._windows_tcl_env(client_install_path)
 
-        self.tcl_interp = TgnTkMultithread()
-        self.tcl_interp.start()
-        api_wrapper = IxlTclWrapper(self.logger, client_install_path, self.tcl_interp)
+        api_wrapper = IxlTclWrapper(self.logger, client_install_path)
         self.ixl = IxlApp(self.logger, api_wrapper)
 
         address = context.resource.attributes['Controller Address']
@@ -51,7 +48,6 @@ class IxlHandler(TrafficHandler):
 
     def tearDown(self):
         self.ixl.disconnect()
-        self.tcl_interp.stop()
 
     def load_config(self, context, ixia_config_file_name):
 
@@ -66,9 +62,15 @@ class IxlHandler(TrafficHandler):
         for port in tg_helper.get_reservation_ports(my_api, reservation_id):
             reservation_ports[my_api.GetAttributeValue(port.Name, 'Logical Name').Value.strip()] = port
 
+        perfectstorms = [ps.FullAddress for ps in tg_helper.get_reservation_ports(my_api, reservation_id,
+                                                                                  'PerfectStorm Chassis')]
+
         for name, element in config_elements.items():
             if name in reservation_ports:
                 address = tg_helper.get_address(reservation_ports[name])
+                ip_address, module, port = address.split('/')
+                if ip_address in perfectstorms:
+                    address = '{}/{}/{}'.format(ip_address, module, int(port) + 1)
                 self.logger.debug('Logical Port {} will be reserved on Physical location {}'.format(name, address))
                 element.reserve(address)
             else:

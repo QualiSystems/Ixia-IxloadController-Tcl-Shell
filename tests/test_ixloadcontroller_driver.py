@@ -6,25 +6,25 @@ import os
 import unittest
 import logging
 
-from cloudshell.api.cloudshell_api import CloudShellAPISession
-import cloudshell.traffic.tg_helper as tg_helper
+from cloudshell.traffic.tg_helper import get_reservation_ports
+from shellfoundry.releasetools.test_helper import create_session_from_cloudshell_config, create_command_context
 
 from driver import IxLoadControllerDriver
 
+host = '192.168.30.35'
 host = 'localhost'
-host = '192.168.30.43'
+controller = '192.168.30.35'
 controller = 'localhost'
-controller = '192.168.30.43'
-client_install_path = 'C:/Program Files (x86)/Ixia/IxLoad/8.01-GA'
 client_install_path = '/opt/ixia/ixload/8.01.106.3'
+client_install_path = 'C:/Program Files (x86)/Ixia/IxLoad/8.30-EA'
 
 
 class TestIxLoadControllerDriver(unittest.TestCase):
 
     def setUp(self):
-        self.session = CloudShellAPISession(host, 'admin', 'admin', 'Global')
-        self.context = tg_helper.create_context(host, self.session,
-                                                'ixload test', 'IxLoad Controller', client_install_path)
+        self.session = create_session_from_cloudshell_config()
+        self.context = create_command_context(host, self.session,
+                                              'ps test', 'IxLoad Controller', client_install_path)
         self.context.resource.attributes['Controller Address'] = controller
         self.driver = IxLoadControllerDriver()
         self.driver.initialize(self.context)
@@ -40,7 +40,7 @@ class TestIxLoadControllerDriver(unittest.TestCase):
         pass
 
     def test_load_config(self):
-        reservation_ports = tg_helper.get_reservation_ports(self.session, self.context.reservation.reservation_id)
+        reservation_ports = get_reservation_ports(self.session, self.context.reservation.reservation_id)
         self.session.SetAttributeValue(reservation_ports[0].Name, 'Logical Name', 'Traffic1@Network1')
         self.session.SetAttributeValue(reservation_ports[1].Name, 'Logical Name', 'Traffic2@Network2')
         self.driver.load_config(self.context, 'E:/workspace/python/PyIxLoad/ixload/test/configs/test_config.rxf')
@@ -61,7 +61,7 @@ class TestIxLoadControllerDriver(unittest.TestCase):
 
     def negative_tests(self):
         test_config = os.path.dirname(__file__).replace('\\', '/') + '/test_config.rxf'
-        reservation_ports = tg_helper.get_reservation_ports(self.session, self.context.reservation.reservation_id)
+        reservation_ports = get_reservation_ports(self.session, self.context.reservation.reservation_id)
         assert(len(reservation_ports) == 2)
         self.session.SetAttributeValue(reservation_ports[0].Name, 'Logical Name', 'Traffic1@Network1')
         self.session.SetAttributeValue(reservation_ports[1].Name, 'Logical Name', '')
@@ -72,6 +72,7 @@ class TestIxLoadControllerDriver(unittest.TestCase):
         self.assertRaises(Exception, self.driver.load_config, self.context, test_config)
         # cleanup
         self.session.SetAttributeValue(reservation_ports[1].Name, 'Logical Name', 'Traffic2@Network2')
+
 
 if __name__ == '__main__':
     sys.exit(unittest.main())
