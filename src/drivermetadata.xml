@@ -1,7 +1,11 @@
-<Driver Description="Shell to setup and run IxLoad traffic generator" MainClass="driver.IxLoadControllerDriver" Name="IxLoadControllerDriver" Version="1.2.4">
+<Driver Description="Shell to setup and run IxLoad traffic generator" MainClass="driver.IxLoadControllerDriver" Name="IxLoadControllerDriver" Version="1.5.2">
     <Layout>
 
          <Category Name="Hidden Commands">
+	    	<Command Description="API only command to get IxLoad REST session ID" Name="get_session_id" Tags="" />
+    	   	<Command Description="API only command to get IxLoad object children" Name="get_children" Tags="" />
+       		<Command Description="API only command to get IxLoad object attributes" Name="get_attributes" Tags="" />
+          	<Command Description="API only command to set IxLoad object attribute" Name="set_attribute" Tags="" />
             <Command Description="" DisplayName="Keep Alive" EnableCancellation="true" Name="keep_alive" Tags="" />
         </Category>
 

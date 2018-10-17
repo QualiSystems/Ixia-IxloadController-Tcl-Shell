@@ -4,4 +4,4 @@ shell:
   driver_name: IxLoadControllerDriver
   email: yoram-s@quali.com
   name: ixia_ixloadcontroller_shell
-  version: 1.2.4
+  version: 1.5.2

@@ -20,6 +20,12 @@
         		<Rule Name="Configuration" />
       		</Rules>
     	</AttributeInfo>
+    	<AttributeInfo Name="Controller Version" Type="String" DefaultValue="" IsReadOnly="false"
+    				   Description="The version of the traffic server.">
+      		<Rules>
+        		<Rule Name="Configuration" />
+      		</Rules>
+    	</AttributeInfo>  	
         <AttributeInfo Name="Password" Type="Password" DefaultValue="" IsReadOnly="false"
          			   Description="">
             <Rules>
