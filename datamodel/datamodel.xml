@@ -50,7 +50,7 @@
   	</ResourceFamilies>
  
   <DriverDescriptors>
-      <DriverDescriptor Name="IxLoadControllerDriver" DriverType="PythonDriver" />
+      <DriverDescriptor Name="IxLoadControllerTclDriver" DriverType="PythonDriver" />
   </DriverDescriptors>
 
 </DataModelInfo>

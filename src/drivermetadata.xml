@@ -1,4 +1,4 @@
-<Driver Description="Shell to setup and run IxLoad traffic generator" MainClass="driver.IxLoadControllerDriver" Name="IxLoadControllerDriver" Version="1.5.2">
+<Driver Description="Shell to setup and run IxLoad traffic generator over Tcl API" MainClass="driver.IxLoadControllerTclDriver" Name="IxLoadControllerTclDriver" Version="1.5.2">
     <Layout>
 
          <Category Name="Hidden Commands">

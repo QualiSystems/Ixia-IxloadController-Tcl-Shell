@@ -1,7 +1,7 @@
 shell:
   author: Yoram Shamir
-  description: Ixia IxLoad Controller
-  driver_name: IxLoadControllerDriver
+  description: Ixia IxLoad Controller Tcl
+  driver_name: IxLoadControllerTclDriver
   email: yoram-s@quali.com
-  name: ixia_ixloadcontroller_shell
+  name: ixia_ixloadcontroller_tcl_shell
   version: 1.5.2

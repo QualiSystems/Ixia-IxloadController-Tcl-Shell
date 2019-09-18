@@ -23,7 +23,7 @@
                  <source>src</source>
             </sources>
             <!-- the driver name of the driver to update -->
-            <targetName>IxLoadControllerDriver</targetName>
+            <targetName>IxLoadControllerTclDriver</targetName>
         </driver>
     </drivers>
 

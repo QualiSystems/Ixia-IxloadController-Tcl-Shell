@@ -4,20 +4,17 @@
     </ShellAttributes>
 
     <ShellModel Family="Traffic Generator Controller">
-        <ResourceModel Name="IxLoad Controller" Description="IxLoad Controller" SupportsConcurrentCommands="true">
+        <ResourceModel Name="IxLoad Controller Tcl" Description="IxLoad Controller over Tcl API" SupportsConcurrentCommands="true">
 			<AttachedAttributes>
-        		<AttachedAttribute Name="Controller Version" IsOverridable="true" IsLocal="true" UserInput="true">
+        		<AttachedAttribute Name="Client Install Path" IsOverridable="true" IsLocal="true" UserInput="true">
             		<AllowedValues />
           		</AttachedAttribute>
         		<AttachedAttribute Name="Controller Address" IsOverridable="true" IsLocal="true" UserInput="true">
             		<AllowedValues />
           		</AttachedAttribute>
-        		<AttachedAttribute Name="Controller TCP Port" IsOverridable="true" IsLocal="true" UserInput="true">
-            		<AllowedValues />
-          		</AttachedAttribute>
 			</AttachedAttributes>
             <Drivers>
-                <DriverName>IxLoadControllerDriver</DriverName>
+                <DriverName>IxLoadControllerTclDriver</DriverName>
             </Drivers>			
         </ResourceModel>
     </ShellModel>

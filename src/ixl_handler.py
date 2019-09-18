@@ -11,38 +11,40 @@ from cloudshell.traffic.handler import TrafficHandler
 from cloudshell.traffic.tg_helper import (get_reservation_resources, get_address, is_blocking, attach_stats_csv,
                                           get_family_attribute)
 
+from trafficgenerator.tgn_utils import ApiType
 from ixload.ixl_app import init_ixl
 from ixload.ixl_statistics_view import IxlStatView
 
 from cloudshell.shell.core.session.cloudshell_session import CloudShellSessionContext
 
 
-class IxlHandler(TrafficHandler):
+class IxlHandlerTcl(TrafficHandler):
 
     def initialize(self, context, logger):
 
         self.logger = logger
-        self.ixl = init_ixl(self.logger)
 
-        version = context.resource.attributes['Controller Version']
+        client_install_path = context.resource.attributes['Client Install Path'].replace('\\', '/')
+        if sys.platform == 'win32':
+            self._windows_tcl_env(client_install_path)
+
+        self.ixl = init_ixl(ApiType.tcl, self.logger, client_install_path)
+
         address = context.resource.attributes['Controller Address']
         if not address:
             address = 'localhost'
-        port = context.resource.attributes['Controller TCP Port']
-        if not port:
-            port = '8080'
-
-        self.logger.info('connecting to server {}:{} version {}'.format(address, port, version))
-        self.ixl.connect(version=version, ip=address, port=port)
+        self.logger.info('connecting to address {}'.format(address))
+        self.ixl.connect(ip=address)
         if sys.platform == 'win32':
             log_file_name = self.logger.handlers[0].baseFilename
             self.server_results_dir = (os.path.splitext(log_file_name)[0] + '--Results').replace('\\', '/')
             self.client_results_dir = self.server_results_dir
         else:
-            self.server_results_dir = 'c:/temp/IxLoadResults'
+            self.server_results_dir = 'c:/IxLoadResults'
             self.client_results_dir = '/IxLoadResults'
         logger.info('results directory = ' + self.server_results_dir)
         self.ixl.controller.set_results_dir(self.server_results_dir)
+        self.logger.info("Port Reservation Completed")
 
     def tearDown(self):
         self.ixl.disconnect()
@@ -106,18 +108,6 @@ class IxlHandler(TrafficHandler):
             return output.getvalue().strip()
         else:
             raise Exception('Output type should be CSV/JSON - got "{}"'.format(output_type))
-
-    def get_session_id(self):
-        return self.ixl.api.session_url
-
-    def get_children(self, obj_ref, child_type):
-        return self.ixl.api.getList(obj_ref, child_type)
-
-    def get_attributes(self, obj_ref):
-        return self.ixl.api.getAttributes(obj_ref)
-
-    def set_attribute(self, obj_ref, attr_name, attr_value):
-        return self.ixl.api.setAttributes(obj_ref, **{attr_name: attr_value})
 
     #
     # Private auxiliary methods.
